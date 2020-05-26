@@ -15,9 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from view import face_controller
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path("get_feature", )
+    path("get_feature", face_controller.face_controller, name="face_controller")
 ]

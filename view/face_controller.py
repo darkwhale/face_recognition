@@ -14,7 +14,8 @@ def face_controller(request):
     2: 其它错误
     """
     if request.method == "POST":
-        post_data = json.loads(request.body)
+        print(request.body)
+        post_data = json.loads(request.body, strict=False)
 
         if post_data:
             image_json = post_data.get("image_json", None)
