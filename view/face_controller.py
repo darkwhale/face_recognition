@@ -14,14 +14,14 @@ def face_controller(request):
     2: 其它错误
     """
     if request.method == "POST":
-        print(request.body)
         post_data = json.loads(request.body, strict=False)
 
         if post_data:
             image_json = post_data.get("image_json", None)
+            save_symbol = True if post_data.get("save_symbol", None) == "save" else False
 
             if image_json is not None:
-                response = face_handler.get_feature(image_json)
+                response = face_handler.get_feature(image_json, save_symbol)
 
                 code = 0 if response else 1
 
@@ -32,8 +32,16 @@ def face_controller(request):
 
                 return HttpResponse(response_json, content_type="application/json")
 
+            else:
+                response_json = json.dumps({
+                    "code": 2,
+                    "data": {},
+                })
+
+                return HttpResponse(response_json, content_type="application/json")
+
     response_json = json.dumps({
-        "code": 2,
+        "code": 3,
         "data": {},
     })
 

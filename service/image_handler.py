@@ -6,6 +6,9 @@ import base64
 import os
 from PIL import Image
 from io import BytesIO
+from service.key_service import generate_key
+
+from service.exception import FaceException
 
 shape_model = os.path.join("model", "shape_predictor_5_face_landmarks.dat")
 predict_model = os.path.join("model", "dlib_face_recognition_resnet_model_v1.dat")
@@ -13,6 +16,8 @@ predict_model = os.path.join("model", "dlib_face_recognition_resnet_model_v1.dat
 detector = dlib.get_frontal_face_detector()
 shape_predictor = dlib.shape_predictor(shape_model)
 face_predictor = dlib.face_recognition_model_v1(predict_model)
+
+image_dir = os.path.join("/home", "images")
 
 
 class ImageHandler(object):
@@ -23,19 +28,44 @@ class ImageHandler(object):
     def __init__(self,
                  image_base64=None,
                  detect_symbol=True,
-                 use_scaled=True):
+                 use_scaled=True,
+                 save_symbol=False):
         self.image = self.base64_to_image_mat(image_base64)
         self.detect_symbol = detect_symbol
         self.use_scaled = use_scaled
+        self.save_symbol = save_symbol
 
         if self.image.ndim == 2:
             self.image = cv2.cvtColor(self.image, cv2.COLOR_GRAY2RGB)
 
         self.face_chips, self.det_list = self._get_normal_image()
 
+        if self.save_symbol:
+            if self.get_face_num() != 1:
+                raise FaceException("face num should be 1")
+            else:
+                self.image_path = self.save_normal_image()
+
     def get_det_list(self):
         """返回人脸标准化的图像快"""
         return self.det_list
+
+    def get_normal_det_list(self):
+        """返回人脸标准化的图像快"""
+        return [self.normal_det(det) for det in self.det_list]
+
+    def get_face_num(self):
+        return len(self.det_list)
+
+    def get_image_path(self):
+        return self.image_path
+
+    def save_normal_image(self):
+        """save image"""
+        image = Image.fromarray(self.face_chips[0])
+        image_name = "{}{}".format(generate_key(), ".png")
+        image.save(os.path.join(image_dir, image_name))
+        return image_name
 
     def get_feature(self):
         """获取人脸和对应的人脸特征"""
@@ -43,9 +73,9 @@ class ImageHandler(object):
         face_features = []
         for face_chip in self.face_chips:
             # 注意这里用face_chip[:, :, ::-1]，因为opencv中使用的是BGR格式，需要转化为RGB格式；
-            face_features.append(face_predictor.compute_face_descriptor(face_chip[:, :, ::-1]))
+            face_features.append(face_predictor.compute_face_descriptor(face_chip))
 
-        return face_features
+        return [self.normal_vector(feature) for feature in face_features]
 
     def _get_normal_image(self):
         """获取标准化后的人脸图片和人脸位置"""
@@ -83,4 +113,21 @@ class ImageHandler(object):
         image_io = BytesIO(image_base64)
         image = Image.open(image_io)
 
-        return cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
+        return np.asarray(image)
+
+    @staticmethod
+    def normal_det(det):
+        return {
+            "left": det.left(),
+            "right": det.right(),
+            "top": det.top(),
+            "bottom": det.bottom()
+        }
+
+    @staticmethod
+    def normal_vector(vector):
+        # return {
+        #     "feature": list(vector)
+        # }
+        return list(vector)
+

@@ -14,4 +14,4 @@ def image_to_base64(file_path):
 
 
 if __name__ == '__main__':
-    print(image_to_base64("1.jpg"))
+    print(image_to_base64("26.jpg"))
